@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sevkiyat Karar Fişi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+<style>
+  :root{
+    --paper:#F1ECE1;
+    --paper-dark:#E8E1D2;
+    --card:#FFFDF8;
+    --ink:#28241F;
+    --ink-soft:#5B5348;
+    --muted:#948B7A;
+    --navy:#1F3864;
+    --navy-soft:#3A5580;
+    --kraft:#C9BEA5;
+    --send:#2F6F4E;
+    --send-bg:#E4EFE7;
+    --hold:#AD5A17;
+    --hold-bg:#F5E6D3;
+    --danger:#9C3B2E;
+    --shadow: 0 1px 2px rgba(40,36,31,0.06), 0 8px 24px -12px rgba(40,36,31,0.18);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 90% -10%, #F7F2E6 0%, transparent 60%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding:32px 20px 80px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+
+  /* header */
+  .masthead{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:3px solid var(--ink);
+    padding-bottom:18px;margin-bottom:28px;
+    flex-wrap:wrap;gap:12px;
+  }
+  .masthead .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 6px;
+  }
+  .masthead h1{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;letter-spacing:.01em;
+    font-size:clamp(28px,4vw,40px);
+    margin:0;color:var(--ink);text-transform:uppercase;
+  }
+  .masthead .meta{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);
+    text-align:right;line-height:1.6;
+  }
+
+  /* layout */
+  .grid{display:grid;grid-template-columns:1.35fr 1fr;gap:24px;}
+  @media (max-width:920px){.grid{grid-template-columns:1fr;}}
+
+  .panel{
+    background:var(--card);
+    border:1px solid var(--kraft);
+    border-radius:2px;
+    box-shadow:var(--shadow);
+    padding:24px 24px 26px;
+    margin-bottom:20px;
+    position:relative;
+  }
+  .panel::before{
+    content:"";position:absolute;top:0;left:0;bottom:0;width:4px;background:var(--navy);
+  }
+  .panel-title{
+    font-family:'Oswald',sans-serif;font-weight:500;text-transform:uppercase;
+    letter-spacing:.06em;font-size:15px;color:var(--navy);
+    margin:0 0 4px;display:flex;align-items:center;gap:8px;
+  }
+  .panel-sub{font-size:12.5px;color:var(--muted);margin:0 0 18px;line-height:1.5;}
+  .step-num{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;
+    background:var(--navy);color:#fff;border-radius:50%;
+    width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+
+  /* search + add */
+  .search-row{display:flex;gap:8px;margin-bottom:6px;position:relative;}
+  input[type=text], input[type=number], select{
+    font-family:'Inter',sans-serif;font-size:14px;
+    border:1px solid var(--kraft);border-radius:3px;
+    padding:9px 11px;background:#fff;color:var(--ink);width:100%;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus{
+    outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(31,56,100,0.12);
+  }
+  .search-wrap{flex:1;position:relative;}
+  .suggestions{
+    position:absolute;top:calc(100% + 4px);left:0;right:0;
+    background:#fff;border:1px solid var(--kraft);border-radius:3px;
+    max-height:260px;overflow-y:auto;z-index:20;box-shadow:var(--shadow);
+  }
+  .suggestions div{
+    padding:9px 12px;font-size:13.5px;cursor:pointer;border-bottom:1px solid #F0EBDD;
+  }
+  .suggestions div:last-child{border-bottom:none;}
+  .suggestions div:hover{background:var(--paper-dark);}
+  .suggestions .cat{color:var(--muted);font-size:11px;font-family:'IBM Plex Mono',monospace;}
+  input.qty-input{width:100px;flex:0 0 100px;}
+  .add-btn{
+    background:var(--navy);color:#fff;border:none;border-radius:3px;
+    padding:9px 16px;font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
+    cursor:pointer;flex:1 1 auto;transition:background .15s;
+    white-space:nowrap;
+  }
+  .add-btn:hover{background:var(--navy-soft);}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:4px;}
+
+  /* order table */
+  table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px;}
+  thead th{
+    text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+    border-bottom:1.5px solid var(--ink);padding:6px 8px;
+  }
+  tbody td{padding:9px 8px;border-bottom:1px solid #EFE9DA;vertical-align:middle;}
+  tbody tr:hover{background:var(--paper-dark);}
+  td.num, th.num{text-align:right;font-family:'IBM Plex Mono',monospace;}
+  .empty-row td{color:var(--muted);font-style:italic;text-align:center;padding:26px 8px;}
+  .rm-btn{
+    background:none;border:none;color:var(--danger);cursor:pointer;font-size:15px;
+    padding:2px 6px;line-height:1;
+  }
+  .rm-btn:hover{opacity:.6;}
+  tfoot td{
+    padding:12px 8px 4px;font-family:'IBM Plex Mono',monospace;font-weight:600;
+    border-top:2px solid var(--ink);font-size:13.5px;
+  }
+
+  /* controls */
+  .ctrl-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .ctrl-row label{
+    display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--muted);margin-bottom:5px;font-family:'IBM Plex Mono',monospace;
+  }
+  .toggle-row{display:flex;align-items:center;gap:8px;margin-top:10px;}
+  .toggle-row input{width:16px;height:16px;}
+  .toggle-row label{font-size:13px;color:var(--ink-soft);font-family:'Inter',sans-serif;
+    text-transform:none;letter-spacing:0;margin:0;}
+
+  /* box catalog */
+  .box-list{margin-top:4px;}
+  .box-row{
+    display:grid;grid-template-columns:1fr 110px 30px;gap:8px;margin-bottom:8px;align-items:center;
+  }
+  .box-row input{font-size:13px;padding:7px 9px;}
+  .box-row .rm-btn{justify-self:center;}
+  .add-box-btn{
+    background:none;border:1px dashed var(--kraft);color:var(--navy-soft);
+    border-radius:3px;padding:7px 12px;font-size:12.5px;cursor:pointer;width:100%;
+    font-family:'Inter',sans-serif;font-weight:600;margin-top:2px;
+  }
+  .add-box-btn:hover{background:var(--paper-dark);}
+
+  /* verdict stamp */
+  .sticky-wrap{position:sticky;top:20px;display:flex;flex-direction:column;gap:20px;}
+  .verdict-card{
+    background:var(--card);border:1px solid var(--kraft);border-radius:2px;
+    box-shadow:var(--shadow);padding:26px 24px;text-align:center;
+  }
+  .verdict-label{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--muted);margin:0 0 14px;
+  }
+  .stamp{
+    display:inline-block;
+    font-family:'Oswald',sans-serif;font-weight:700;font-size:26px;
+    letter-spacing:.08em;text-transform:uppercase;
+    border:3px double currentColor;border-radius:6px;
+    padding:12px 28px;transform:rotate(-3deg);
+    margin-bottom:16px;
+  }
+  .stamp.send{color:var(--send);background:var(--send-bg);}
+  .stamp.hold{color:var(--hold);background:var(--hold-bg);}
+  .verdict-reason{
+    font-size:13.5px;color:var(--ink-soft);line-height:1.55;
+    max-width:340px;margin:0 auto 20px;
+  }
+  .metric-strip{
+    display:grid;grid-template-columns:1fr 1fr;gap:1px;
+    background:var(--kraft);border:1px solid var(--kraft);border-radius:3px;
+    overflow:hidden;margin-bottom:6px;
+  }
+  .metric{background:var(--card);padding:14px 10px;}
+  .metric .v{
+    font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:20px;color:var(--ink);
+  }
+  .metric .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
+  .fill-bar-wrap{margin-top:16px;text-align:left;}
+  .fill-bar-track{
+    height:10px;background:var(--paper-dark);border-radius:5px;overflow:hidden;
+    border:1px solid var(--kraft);
+  }
+  .fill-bar-fill{height:100%;border-radius:5px;transition:width .25s ease;}
+  .fill-bar-labels{display:flex;justify-content:space-between;font-size:10.5px;
+    color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:4px;}
+
+  .disclaimer{
+    font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:18px;
+    padding-top:14px;border-top:1px dashed var(--kraft);text-align:left;
+  }
+  .disclaimer b{color:var(--ink-soft);}
+
+  footer{
+    max-width:1180px;margin:36px auto 0;text-align:center;
+    font-size:11.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div>
+      <p class="eyebrow">İstanbul Sevkiyat Projesi — Prototip Araç</p>
+      <h1>Koli &amp; Sevkiyat Karar Fişi</h1>
+    </div>
+    <div class="meta">
+      Toyota yedek parça &middot; 199 kategori<br>
+      Hacimler tahminidir, doğrulanmalıdır
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- LEFT COLUMN -->
+    <div>
+      <div class="panel">
+        <p class="panel-title"><span class="step-num">1</span> Sipariş İçeriğini Gir</p>
+        <p class="panel-sub">Bu sevkiyatta hangi parçadan kaç adet gidiyor? Önce ana kategoriyi, sonra parçayı seçin (yazmanıza gerek yok, tıklamanız yeterli).</p>
+        <div class="search-row">
+          <select id="anaKatSelect" style="flex:1;"><option value="">1) Ana kategori seç…</option></select>
+          <select id="altKatSelect" style="flex:1.4;"><option value="">2) Parça seç…</option></select>
+        </div>
+        <div class="search-row">
+          <input type="number" id="qtyInput" class="qty-input" placeholder="Adet" min="1" value="1">
+          <button class="add-btn" id="addBtn">+ Ekle</button>
+        </div>
+        <p class="hint" id="selectedHint">Henüz parça seçilmedi.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Parça</th>
+              <th class="num">Adet</th>
+              <th class="num">Birim Hacim (cm³)</th>
+              <th class="num">Toplam (cm³)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="orderBody">
+            <tr class="empty-row"><td colspan="5">Sipariş listesi boş — yukarıdan parça ekleyin.</td></tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3">TOPLAM TAHMİNİ HACİM</td>
+              <td class="num" id="totalVol">0 cm³</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title"><span class="step-num">2</span> Koli Kataloğu</p>
+        <p class="panel-sub">Sahada gördüğünüz koli tiplerini ve yaklaşık kapasitelerini (cm³) buraya girin. Emin değilseniz kaba bir tahminle başlayın, sonra düzeltin.</p>
+        <div class="box-list" id="boxList"></div>
+        <button class="add-box-btn" id="addBoxBtn">+ Koli Tipi Ekle</button>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title"><span class="step-num">3</span> Dalga Bağlamı</p>
+        <p class="panel-sub">Erteleme önerisi, bu bilgiye göre şekillenir.</p>
+        <div class="ctrl-row">
+          <div>
+            <label>Şu anki dalga</label>
+            <select id="waveSelect">
+              <option>08:20</option>
+              <option>09:45</option>
+              <option>13:15</option>
+              <option>Diğer</option>
+            </select>
+          </div>
+          <div>
+            <label>Erteleme eşiği (%)</label>
+            <input type="number" id="thresholdInput" value="50" min="1" max="99">
+          </div>
+        </div>
+        <div class="toggle-row">
+          <input type="checkbox" id="lastWaveCheck">
+          <label for="lastWaveCheck">Bu, günün son dalgası — ertelenemez, mutlaka gitmeli</label>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title"><span class="step-num">4</span> Araç Doluluğu ve Çıkış Kararı</p>
+        <p class="panel-sub">Bu dalgada araca yüklenecek koliler hangi bayiye, hangi tipte, kaç adet? Bayiyi listeden seçin (13 bayinin gerçek konumu sistemde kayıtlı). Kolinin kendi kapasitesi sayılır.</p>
+        <div class="search-row">
+          <select id="vehSubeInput" style="flex:1.3;"><option value="">Bayi seç…</option></select>
+          <select id="vehKoliSelect" style="flex:1;"></select>
+        </div>
+        <div class="search-row">
+          <input type="number" id="vehAdetInput" class="qty-input" placeholder="Adet" min="1" value="1">
+          <button class="add-btn" id="vehAddBtn">+ Araca Ekle</button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Şube</th>
+              <th>Koli Tipi</th>
+              <th class="num">Adet</th>
+              <th class="num">Hacim (cm³)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="vehBody">
+            <tr class="empty-row"><td colspan="5">Araç listesi boş — yukarıdan koli ekleyin.</td></tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3">TOPLAM KOLİ HACMİ</td>
+              <td class="num" id="vehTotalVol">0 cm³</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="ctrl-row" style="margin-top:16px;">
+          <div>
+            <label>Araç kapasitesi (cm³)</label>
+            <input type="number" id="vehCapInput" value="500000" min="1">
+          </div>
+          <div>
+            <label>Araç çıkış eşiği (%)</label>
+            <input type="number" id="vehThresholdInput" value="70" min="1" max="99">
+          </div>
+        </div>
+        <p class="hint">"Bu, günün son dalgası" işaretliyse, doluluk düşük olsa da araç yine çıkar önerisi verilir (yukarıdaki kutu, adım 3).</p>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title"><span class="step-num">5</span> Rota Optimizasyonu</p>
+        <p class="panel-sub">Adım 4'teki listeye eklediğiniz bayileri, kaç araca böleceğinizi ve depodan başlayarak en kısa sırayla nasıl gezileceğini hesaplar. <b>Not:</b> mesafeler kuş uçuşu (gerçek yol mesafesi değil) — kaba bir tahmindir.</p>
+
+        <div class="search-row">
+          <input type="text" id="depoAdresInput" placeholder="Farklı bir depo aramak isterseniz adres yazın" style="flex:1;">
+          <button class="add-btn" id="depoBulBtn" style="flex:0 0 auto;">Depoyu Bul</button>
+        </div>
+        <p class="hint" id="depoHint">Varsayılan depo: <b>Toyota Eğitim ve Yedek Parça Merkezi, Tuzla</b>. Değiştirmek isterseniz yukarıya yeni bir adres yazıp "Depoyu Bul" deyin.</p>
+
+        <div class="ctrl-row" style="margin-top:12px;">
+          <div>
+            <label>Araç sayısı</label>
+            <input type="number" id="vehicleCountInput" value="2" min="1" max="8">
+          </div>
+          <div style="display:flex;align-items:flex-end;">
+            <button class="add-btn" id="rotaOlusturBtn" style="width:100%;">Rotaları Oluştur</button>
+          </div>
+        </div>
+
+        <div id="rotaSonuc" style="margin-top:16px;"></div>
+        <div id="rotaMap" style="height:340px;border:1px solid var(--kraft);border-radius:3px;margin-top:14px;display:none;"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div>
+      <div class="sticky-wrap">
+      <div class="verdict-card">
+        <p class="verdict-label">Koli Önerisi (Tek Şube)</p>
+        <div class="stamp hold" id="stampEl">Bekleniyor</div>
+        <p class="verdict-reason" id="reasonText">Sipariş listesine parça ekleyin, öneri burada oluşacak.</p>
+
+        <div class="metric-strip">
+          <div class="metric">
+            <div class="v" id="metricBox">—</div>
+            <div class="l">Önerilen Koli</div>
+          </div>
+          <div class="metric">
+            <div class="v" id="metricFill">—</div>
+            <div class="l">Doluluk Oranı</div>
+          </div>
+        </div>
+
+        <div class="fill-bar-wrap">
+          <div class="fill-bar-track"><div class="fill-bar-fill" id="fillBar" style="width:0%;background:var(--muted);"></div></div>
+          <div class="fill-bar-labels"><span>0%</span><span id="thresholdMark">eşik</span><span>100%</span></div>
+        </div>
+
+        <div class="disclaimer">
+          <b>Not:</b> Hacimler, parça kategorisinin tipik şekline dayalı <b>tahmindir</b> — gerçek ölçüm değildir.
+          Koli kapasiteleri de sizin sahada gireceğiniz tahmini değerlerdir. Bu araç, gerçek veriler
+          elde edildikçe daha isabetli hale gelecek bir <b>karar destek prototipidir</b>.
+        </div>
+      </div>
+
+      <div class="verdict-card">
+        <p class="verdict-label">Araç Çıkış Kararı (Tüm Dalga)</p>
+        <div class="stamp hold" id="vehStampEl">Bekleniyor</div>
+        <p class="verdict-reason" id="vehReasonText">Araç listesine koli ekleyin, öneri burada oluşacak.</p>
+
+        <div class="metric-strip" style="grid-template-columns:1fr 1fr 1fr;">
+          <div class="metric">
+            <div class="v" id="vehMetricStops">—</div>
+            <div class="l">Durak / Bayi</div>
+          </div>
+          <div class="metric">
+            <div class="v" id="vehMetricCount">—</div>
+            <div class="l">Toplam Koli</div>
+          </div>
+          <div class="metric">
+            <div class="v" id="vehMetricFill">—</div>
+            <div class="l">Araç Doluluğu</div>
+          </div>
+        </div>
+
+        <div class="fill-bar-wrap">
+          <div class="fill-bar-track"><div class="fill-bar-fill" id="vehFillBar" style="width:0%;background:var(--muted);"></div></div>
+          <div class="fill-bar-labels"><span>0%</span><span id="vehThresholdMark">eşik</span><span>100%</span></div>
+        </div>
+
+        <div class="disclaimer">
+          <b>Not:</b> Bu karar, kolilerin <b>kendi kapasitesi</b> üzerinden hesaplanır — içindeki ürün
+          az olsa bile koli aracın içinde aynı yeri kaplar. "Toplam Koli Hacmi" alanı adım 2'deki
+          koli kataloğunuzu kullanır.
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+
+
+  <footer>Bu araç, teorik hacim × tahmini paketleme verimliliği hesaplarını kullanır. Sahada doğrulandıkça güncellenmelidir.</footer>
+</div>
+
+<script>
+const PARCA_VERISI = [{"ana": "Filtreler", "alt": "Hava Filtresi", "ozellik": "Düz/kutu şekilli, hafif", "tier": "Yüksek", "eff": 0.85, "L": 25, "W": 20, "H": 5}, {"ana": "Filtreler", "alt": "Polen Filtresi", "ozellik": "Küçük, düz kutu", "tier": "Yüksek", "eff": 0.85, "L": 25, "W": 15, "H": 3}, {"ana": "Filtreler", "alt": "Yağ Filtresi", "ozellik": "Silindirik, küçük", "tier": "Yüksek", "eff": 0.85, "L": 7, "W": 7, "H": 10}, {"ana": "Filtreler", "alt": "Yakıt Filtresi", "ozellik": "Silindirik, küçük", "tier": "Yüksek", "eff": 0.85, "L": 6, "W": 6, "H": 12}, {"ana": "Filtreler", "alt": "Karter Tapası", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 3, "W": 3, "H": 3}, {"ana": "Filtreler", "alt": "Şanzıman Yağ Filtresi", "ozellik": "Küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 10, "W": 10, "H": 5}, {"ana": "Yağlar ve Sıvılar", "alt": "Motor Yağ", "ozellik": "Standart bidon, istiflenebilir", "tier": "Yüksek", "eff": 0.85, "L": 20, "W": 13, "H": 24}, {"ana": "Yağlar ve Sıvılar", "alt": "Antifriz", "ozellik": "Standart bidon, istiflenebilir", "tier": "Yüksek", "eff": 0.85, "L": 20, "W": 13, "H": 25}, {"ana": "Yağlar ve Sıvılar", "alt": "Fren Hidrolik Yağ", "ozellik": "Küçük şişe, istiflenebilir", "tier": "Yüksek", "eff": 0.85, "L": 6, "W": 6, "H": 18}, {"ana": "Yağlar ve Sıvılar", "alt": "Direksiyon Yağ", "ozellik": "Küçük şişe, istiflenebilir", "tier": "Yüksek", "eff": 0.85, "L": 8, "W": 8, "H": 20}, {"ana": "Yağlar ve Sıvılar", "alt": "Şanzıman Yağ", "ozellik": "Standart bidon, istiflenebilir", "tier": "Yüksek", "eff": 0.85, "L": 20, "W": 13, "H": 24}, {"ana": "Fren", "alt": "Fren Disk", "ozellik": "Yuvarlak, ağır, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 28, "W": 28, "H": 3}, {"ana": "Fren", "alt": "Fren Balatası", "ozellik": "Yassı, düzenli, kutulu", "tier": "Yüksek", "eff": 0.85, "L": 15, "W": 12, "H": 5}, {"ana": "Fren", "alt": "Balata İkaz Kablosu", "ozellik": "İnce, küçük", "tier": "Yüksek", "eff": 0.85, "L": 20, "W": 2, "H": 2}, {"ana": "Fren", "alt": "Fren Pabuçlu Balata", "ozellik": "Yarım ay şekilli", "tier": "Orta", "eff": 0.65, "L": 20, "W": 15, "H": 4}, {"ana": "Fren", "alt": "El Fren Balatası", "ozellik": "Küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 10, "W": 8, "H": 3}, {"ana": "Fren", "alt": "Abs Sensörü", "ozellik": "Küçük, kablolu, düzensiz uç", "tier": "Orta", "eff": 0.65, "L": 15, "W": 3, "H": 3}, {"ana": "Fren", "alt": "Geri Vites Müşürü", "ozellik": "Küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 5, "W": 4, "H": 4}, {"ana": "Fren", "alt": "Fren Müşürü", "ozellik": "Küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 5, "W": 4, "H": 4}, {"ana": "Fren", "alt": "Fren Vakum Pompa", "ozellik": "Yuvarlak, hacimli", "tier": "Orta", "eff": 0.65, "L": 20, "W": 18, "H": 15}, {"ana": "Fren", "alt": "Kampana", "ozellik": "Büyük, yuvarlak, ağır", "tier": "Orta-Yüksek", "eff": 0.75, "L": 25, "W": 25, "H": 8}, {"ana": "Fren", "alt": "Fren Kaliper", "ozellik": "Düzensiz çıkıntılı gövde", "tier": "Düşük", "eff": 0.525, "L": 20, "W": 12, "H": 10}, {"ana": "Fren", "alt": "Fren Ana Merkez", "ozellik": "Düzensiz, küçük çıkıntılı", "tier": "Orta", "eff": 0.65, "L": 15, "W": 10, "H": 8}, {"ana": "Fren", "alt": "Fren Silindiri", "ozellik": "Silindirik, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 8, "W": 6, "H": 6}, {"ana": "Fren", "alt": "Fren Hortumu", "ozellik": "Esnek, sarılabilir ama uzun", "tier": "Orta", "eff": 0.65, "L": 15, "W": 15, "H": 5}, {"ana": "Fren", "alt": "El Fren Teli", "ozellik": "Uzun, esnek, sarılabilir", "tier": "Orta", "eff": 0.65, "L": 15, "W": 15, "H": 5}, {"ana": "Fren", "alt": "Lastik Basınç Sensörü", "ozellik": "Çok küçük", "tier": "Yüksek", "eff": 0.85, "L": 5, "W": 5, "H": 3}, {"ana": "Ateşleme Sistemi", "alt": "Buji Kablosu", "ozellik": "Uzun, esnek, hacim kaplar", "tier": "Orta", "eff": 0.65, "L": 25, "W": 20, "H": 5}, {"ana": "Ateşleme Sistemi", "alt": "Isıtma Bujisi", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 8, "W": 2, "H": 2}, {"ana": "Ateşleme Sistemi", "alt": "Ateşleme Bobini", "ozellik": "Kutu şekilli, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 10, "W": 6, "H": 6}, {"ana": "Ateşleme Sistemi", "alt": "Distribütör Parçaları", "ozellik": "Düzensiz küçük parçalar", "tier": "Orta", "eff": 0.65, "L": 12, "W": 10, "H": 8}, {"ana": "Ateşleme Sistemi", "alt": "Ateşleme Bujisi", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 8, "W": 2, "H": 2}, {"ana": "Süspansiyon", "alt": "Amortisör", "ozellik": "Uzun silindirik, düzensiz uç", "tier": "Düşük", "eff": 0.525, "L": 45, "W": 10, "H": 10}, {"ana": "Süspansiyon", "alt": "Amortisör Takozu ve Rulmanı", "ozellik": "Küçük, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 10, "W": 10, "H": 5}, {"ana": "Süspansiyon", "alt": "Amortisör Körüğü ve Darbe Emici", "ozellik": "Hacimli, esnek/boşluklu", "tier": "Düşük", "eff": 0.525, "L": 20, "W": 10, "H": 10}, {"ana": "Süspansiyon", "alt": "Amortisör Rulmanı", "ozellik": "Küçük, yuvarlak", "tier": "Orta-Yüksek", "eff": 0.75, "L": 8, "W": 8, "H": 4}, {"ana": "Süspansiyon", "alt": "Helezon Yayı", "ozellik": "Büyük, boşluklu sarmal", "tier": "Çok Düşük", "eff": 0.425, "L": 30, "W": 15, "H": 15}, {"ana": "Süspansiyon", "alt": "Viraj Demir Lastiği", "ozellik": "Küçük, düzensiz", "tier": "Orta", "eff": 0.65, "L": 8, "W": 5, "H": 5}, {"ana": "Süspansiyon", "alt": "Aks Komple", "ozellik": "Uzun, çok düzensiz, ağır", "tier": "Çok Düşük", "eff": 0.425, "L": 70, "W": 20, "H": 20}, {"ana": "Süspansiyon", "alt": "Amortisör Tabla Takozu", "ozellik": "Küçük, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 12, "W": 12, "H": 5}, {"ana": "Süspansiyon", "alt": "Travers Torsiyon Takoz Burç", "ozellik": "Küçük, düzensiz", "tier": "Orta", "eff": 0.65, "L": 10, "W": 8, "H": 8}, {"ana": "Süspansiyon", "alt": "Aks Kafası", "ozellik": "Büyük, çok düzensiz", "tier": "Çok Düşük", "eff": 0.425, "L": 30, "W": 20, "H": 20}, {"ana": "Süspansiyon", "alt": "Rot Başı", "ozellik": "Küçük, uzun sap", "tier": "Orta", "eff": 0.65, "L": 15, "W": 5, "H": 5}, {"ana": "Süspansiyon", "alt": "Rotil", "ozellik": "Küçük, düzensiz eklem", "tier": "Orta", "eff": 0.65, "L": 12, "W": 6, "H": 6}, {"ana": "Süspansiyon", "alt": "Aks Taşıyıcı", "ozellik": "Büyük, çok düzensiz", "tier": "Çok Düşük", "eff": 0.425, "L": 35, "W": 25, "H": 20}, {"ana": "Süspansiyon", "alt": "Salıncak Burcu", "ozellik": "Küçük, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 8, "W": 6, "H": 6}, {"ana": "Süspansiyon", "alt": "Aks Körüğü", "ozellik": "Hacimli, esnek/boşluklu", "tier": "Düşük", "eff": 0.525, "L": 15, "W": 10, "H": 10}, {"ana": "Süspansiyon", "alt": "Porya ve Rulman", "ozellik": "Yuvarlak, orta düzensiz", "tier": "Orta", "eff": 0.65, "L": 12, "W": 12, "H": 8}, {"ana": "Süspansiyon", "alt": "Denge Kolu", "ozellik": "Uzun çubuk", "tier": "Orta", "eff": 0.65, "L": 50, "W": 5, "H": 5}, {"ana": "Süspansiyon", "alt": "Porya", "ozellik": "Yuvarlak, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 10, "W": 10, "H": 6}, {"ana": "Süspansiyon", "alt": "Salıncak", "ozellik": "Büyük, çok düzensiz", "tier": "Çok Düşük", "eff": 0.425, "L": 45, "W": 20, "H": 15}, {"ana": "Süspansiyon", "alt": "Aks Keçesi", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 6, "W": 6, "H": 2}, {"ana": "Süspansiyon", "alt": "Viraj Demir Askı Rotu", "ozellik": "Küçük, uzun sap", "tier": "Orta", "eff": 0.65, "L": 20, "W": 4, "H": 4}, {"ana": "Süspansiyon", "alt": "Rot Mili", "ozellik": "Uzun çubuk", "tier": "Orta", "eff": 0.65, "L": 40, "W": 4, "H": 4}, {"ana": "Debriyaj", "alt": "Volan Civata ve Rulman", "ozellik": "Küçük, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 8, "W": 8, "H": 4}, {"ana": "Debriyaj", "alt": "Debriyaj Seti", "ozellik": "Yuvarlak, orta düzensiz, ağır", "tier": "Orta", "eff": 0.65, "L": 30, "W": 30, "H": 10}, {"ana": "Debriyaj", "alt": "Debriyaj Merkezi ve Rulmanı", "ozellik": "Yuvarlak, orta düzensiz", "tier": "Orta", "eff": 0.65, "L": 20, "W": 20, "H": 8}, {"ana": "Debriyaj", "alt": "Volan", "ozellik": "Büyük, yuvarlak, ağır", "tier": "Orta-Yüksek", "eff": 0.75, "L": 25, "W": 25, "H": 5}, {"ana": "Debriyaj", "alt": "Debriyaj Teli", "ozellik": "Uzun, esnek, sarılabilir", "tier": "Orta", "eff": 0.65, "L": 15, "W": 15, "H": 5}, {"ana": "Debriyaj", "alt": "Şanzıman Yağ", "ozellik": "Standart bidon, istiflenebilir", "tier": "Yüksek", "eff": 0.85, "L": 20, "W": 13, "H": 24}, {"ana": "Triger Zincir ve Rulman", "alt": "Triger Kayış Seti", "ozellik": "Kutu içinde düzenli set", "tier": "Orta-Yüksek", "eff": 0.75, "L": 20, "W": 20, "H": 8}, {"ana": "Triger Zincir ve Rulman", "alt": "Triger Kayışı", "ozellik": "Halka şekilli, düz", "tier": "Orta-Yüksek", "eff": 0.75, "L": 15, "W": 15, "H": 3}, {"ana": "Triger Zincir ve Rulman", "alt": "Triger Zinciri", "ozellik": "Halka şekilli, ağır", "tier": "Orta-Yüksek", "eff": 0.75, "L": 15, "W": 15, "H": 3}, {"ana": "Triger Zincir ve Rulman", "alt": "Triger Zincir Seti", "ozellik": "Kutu içinde düzenli set", "tier": "Orta-Yüksek", "eff": 0.75, "L": 20, "W": 20, "H": 8}, {"ana": "Triger Zincir ve Rulman", "alt": "Triger Gergi Rulmanı", "ozellik": "Küçük, yuvarlak", "tier": "Yüksek", "eff": 0.85, "L": 6, "W": 6, "H": 4}, {"ana": "Triger Zincir ve Rulman", "alt": "V Kayış Gergi Rulmanı", "ozellik": "Küçük, yuvarlak", "tier": "Yüksek", "eff": 0.85, "L": 6, "W": 6, "H": 4}, {"ana": "Triger Zincir ve Rulman", "alt": "V Kayış Seti", "ozellik": "Kutu içinde düzenli set", "tier": "Orta-Yüksek", "eff": 0.75, "L": 15, "W": 15, "H": 5}, {"ana": "Triger Zincir ve Rulman", "alt": "V Kayışı", "ozellik": "Halka şekilli, düz", "tier": "Orta-Yüksek", "eff": 0.75, "L": 12, "W": 12, "H": 3}, {"ana": "Triger Zincir ve Rulman", "alt": "Yağ Pompa Zincir Seti", "ozellik": "Kutu içinde düzenli set", "tier": "Orta-Yüksek", "eff": 0.75, "L": 15, "W": 15, "H": 5}, {"ana": "Triger Zincir ve Rulman", "alt": "Yağ Pompa Zinciri", "ozellik": "Halka şekilli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 12, "W": 12, "H": 3}, {"ana": "Yakıt Sistemi", "alt": "Gaz Kelebeği Sensörü", "ozellik": "Küçük, düzensiz uç", "tier": "Orta", "eff": 0.65, "L": 5, "W": 4, "H": 4}, {"ana": "Yakıt Sistemi", "alt": "Yüksek Basınç Pompası", "ozellik": "Orta, düzensiz gövde", "tier": "Orta", "eff": 0.65, "L": 15, "W": 10, "H": 10}, {"ana": "Yakıt Sistemi", "alt": "Enjektör", "ozellik": "Küçük, uzun, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 10, "W": 3, "H": 3}, {"ana": "Yakıt Sistemi", "alt": "Depo Şamandırası", "ozellik": "Hacimli, boşluklu şekil", "tier": "Düşük", "eff": 0.525, "L": 20, "W": 15, "H": 10}, {"ana": "Yakıt Sistemi", "alt": "Gaz Kelebeği", "ozellik": "Orta, düzensiz gövde", "tier": "Orta", "eff": 0.65, "L": 12, "W": 10, "H": 8}, {"ana": "Yakıt Sistemi", "alt": "Adblue Sistemi", "ozellik": "Değişken, genelde hacimli", "tier": "Düşük", "eff": 0.525, "L": 25, "W": 15, "H": 15}, {"ana": "Yakıt Sistemi", "alt": "Egr Valfi", "ozellik": "Küçük, düzensiz gövde", "tier": "Orta", "eff": 0.65, "L": 12, "W": 8, "H": 8}, {"ana": "Yakıt Sistemi", "alt": "Yakıt Basınç Valfi", "ozellik": "Küçük, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 8, "W": 5, "H": 5}, {"ana": "Yakıt Sistemi", "alt": "Yakıt Otomatiği", "ozellik": "Küçük, düzensiz", "tier": "Orta", "eff": 0.65, "L": 10, "W": 8, "H": 6}, {"ana": "Yakıt Sistemi", "alt": "Yakıt Hortumu", "ozellik": "Esnek, sarılabilir", "tier": "Orta", "eff": 0.65, "L": 15, "W": 15, "H": 5}, {"ana": "Yakıt Sistemi", "alt": "Hava Filtre Kutusu ve Parçaları", "ozellik": "Hacimli, boşluklu plastik", "tier": "Düşük", "eff": 0.525, "L": 35, "W": 25, "H": 15}, {"ana": "Şanzıman", "alt": "Kilometre Hız Sensörü", "ozellik": "Çok küçük", "tier": "Yüksek", "eff": 0.85, "L": 6, "W": 3, "H": 3}, {"ana": "Şanzıman", "alt": "Şanzıman Yağ Karteri", "ozellik": "Yassı, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 30, "W": 20, "H": 5}, {"ana": "Şanzıman", "alt": "Şanzıman Takozu", "ozellik": "Küçük, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 12, "W": 10, "H": 8}, {"ana": "Şanzıman", "alt": "Vites Teli", "ozellik": "Uzun, esnek, sarılabilir", "tier": "Orta", "eff": 0.65, "L": 20, "W": 20, "H": 8}, {"ana": "Şanzıman", "alt": "Şaft Takozu", "ozellik": "Küçük, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 10, "W": 10, "H": 6}, {"ana": "Şanzıman", "alt": "Keçe", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 6, "W": 6, "H": 2}, {"ana": "Şanzıman", "alt": "Şanzıman Yağ", "ozellik": "Standart bidon, istiflenebilir", "tier": "Yüksek", "eff": 0.85, "L": 20, "W": 13, "H": 24}, {"ana": "Şanzıman", "alt": "Geri Vites Müşürü", "ozellik": "Küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 5, "W": 4, "H": 4}, {"ana": "Aydınlatma", "alt": "Far", "ozellik": "Büyük, kırılgan, boşluklu camlı gövde", "tier": "Çok Düşük", "eff": 0.425, "L": 35, "W": 25, "H": 25}, {"ana": "Aydınlatma", "alt": "Stop Lambası", "ozellik": "Orta, kırılgan, boşluklu", "tier": "Düşük", "eff": 0.525, "L": 25, "W": 15, "H": 10}, {"ana": "Aydınlatma", "alt": "Sinyal Lambası", "ozellik": "Küçük, kırılgan", "tier": "Düşük", "eff": 0.525, "L": 12, "W": 8, "H": 6}, {"ana": "Aydınlatma", "alt": "Sis Farı", "ozellik": "Küçük-orta, kırılgan", "tier": "Düşük", "eff": 0.525, "L": 15, "W": 12, "H": 10}, {"ana": "Aydınlatma", "alt": "Çamurluk Sinyali", "ozellik": "Küçük, düzensiz", "tier": "Orta", "eff": 0.65, "L": 8, "W": 5, "H": 5}, {"ana": "Aydınlatma", "alt": "Dikiz Ayna Sinyali", "ozellik": "Küçük, düzensiz", "tier": "Orta", "eff": 0.65, "L": 8, "W": 5, "H": 5}, {"ana": "Aydınlatma", "alt": "Dikiz Aynası", "ozellik": "Orta, düzensiz, kırılgan cam", "tier": "Düşük", "eff": 0.525, "L": 20, "W": 15, "H": 15}, {"ana": "Aydınlatma", "alt": "Ampül", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 6, "W": 3, "H": 3}, {"ana": "Aydınlatma", "alt": "Ayna Camı", "ozellik": "İnce, kırılgan, düz", "tier": "Orta-Yüksek", "eff": 0.75, "L": 15, "W": 10, "H": 2}, {"ana": "Motor", "alt": "Motor Yağ Karteri", "ozellik": "Büyük, düzensiz gövde", "tier": "Düşük", "eff": 0.525, "L": 40, "W": 30, "H": 10}, {"ana": "Motor", "alt": "Silindir Kapak Contası", "ozellik": "Yassı, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 40, "W": 15, "H": 1}, {"ana": "Motor", "alt": "Vuruntu Sensörü", "ozellik": "Çok küçük", "tier": "Yüksek", "eff": 0.85, "L": 5, "W": 4, "H": 4}, {"ana": "Motor", "alt": "Supap Tuşu", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 3, "W": 3, "H": 1}, {"ana": "Motor", "alt": "Supap", "ozellik": "Küçük, uzun ince", "tier": "Orta-Yüksek", "eff": 0.75, "L": 12, "W": 2, "H": 2}, {"ana": "Motor", "alt": "Elektrik ve Sensör", "ozellik": "Küçük, çeşitli, düzensiz", "tier": "Orta", "eff": 0.65, "L": 10, "W": 8, "H": 6}, {"ana": "Motor", "alt": "Takım Conta", "ozellik": "Kutu içinde düzenli set", "tier": "Orta-Yüksek", "eff": 0.75, "L": 30, "W": 25, "H": 8}, {"ana": "Motor", "alt": "Ana Yatak", "ozellik": "Küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 8, "W": 6, "H": 2}, {"ana": "Motor", "alt": "Eksantrik Konum Valfi", "ozellik": "Küçük, düzensiz", "tier": "Orta", "eff": 0.65, "L": 8, "W": 6, "H": 6}, {"ana": "Motor", "alt": "Segman", "ozellik": "Küçük, ince halka", "tier": "Orta-Yüksek", "eff": 0.75, "L": 8, "W": 8, "H": 1}, {"ana": "Motor", "alt": "Yağ Pompası", "ozellik": "Orta, düzensiz gövde", "tier": "Orta", "eff": 0.65, "L": 15, "W": 12, "H": 10}, {"ana": "Motor", "alt": "Karter Contası", "ozellik": "Yassı, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 35, "W": 25, "H": 1}, {"ana": "Motor", "alt": "Motor Üst Kapağı (Külbütör)", "ozellik": "Büyük, düzensiz gövde", "tier": "Düşük", "eff": 0.525, "L": 40, "W": 25, "H": 10}, {"ana": "Motor", "alt": "Eksantrik Devir Sensörü", "ozellik": "Çok küçük", "tier": "Yüksek", "eff": 0.85, "L": 5, "W": 4, "H": 4}, {"ana": "Motor", "alt": "Supap Lastiği", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 3, "W": 3, "H": 1}, {"ana": "Motor", "alt": "Eksantrik Keçesi", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 6, "W": 6, "H": 2}, {"ana": "Motor", "alt": "Motor Takozu", "ozellik": "Orta, düzensiz kauçuk-metal", "tier": "Orta", "eff": 0.65, "L": 15, "W": 12, "H": 12}, {"ana": "Motor", "alt": "Üst Kapak Contası (Külbütör)", "ozellik": "Yassı, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 40, "W": 20, "H": 1}, {"ana": "Motor", "alt": "Manifold", "ozellik": "Büyük, çok düzensiz", "tier": "Çok Düşük", "eff": 0.425, "L": 45, "W": 20, "H": 15}, {"ana": "Motor", "alt": "Manifolt Conta", "ozellik": "Yassı, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 35, "W": 15, "H": 1}, {"ana": "Motor", "alt": "Kol Yatak", "ozellik": "Küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 8, "W": 6, "H": 2}, {"ana": "Motor", "alt": "Ay Yatak", "ozellik": "Küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 8, "W": 6, "H": 2}, {"ana": "Motor", "alt": "MAP Sensörü", "ozellik": "Çok küçük", "tier": "Yüksek", "eff": 0.85, "L": 5, "W": 4, "H": 4}, {"ana": "Motor", "alt": "Supap Gayd ve Baga", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 5, "W": 2, "H": 2}, {"ana": "Motor", "alt": "Piston Segman", "ozellik": "Küçük, orta düzensiz", "tier": "Orta-Yüksek", "eff": 0.75, "L": 10, "W": 10, "H": 8}, {"ana": "Motor", "alt": "Eksantrik Mili", "ozellik": "Uzun, düzensiz çıkıntılı", "tier": "Düşük", "eff": 0.525, "L": 50, "W": 8, "H": 8}, {"ana": "Motor", "alt": "Yağ Seperatörü", "ozellik": "Orta, düzensiz gövde", "tier": "Orta", "eff": 0.65, "L": 15, "W": 12, "H": 10}, {"ana": "Motor", "alt": "Yağ Müşürü", "ozellik": "Çok küçük", "tier": "Yüksek", "eff": 0.85, "L": 4, "W": 3, "H": 3}, {"ana": "Motor", "alt": "Silindir Kapağı", "ozellik": "Büyük, çok düzensiz, ağır", "tier": "Çok Düşük", "eff": 0.425, "L": 50, "W": 25, "H": 15}, {"ana": "Motor", "alt": "Yağ Pompa Contası", "ozellik": "Yassı, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 15, "W": 10, "H": 1}, {"ana": "Motor", "alt": "Krank", "ozellik": "Büyük, ağır, düzensiz çıkıntılı", "tier": "Çok Düşük", "eff": 0.425, "L": 55, "W": 15, "H": 15}, {"ana": "Motor", "alt": "Nox Sensörü", "ozellik": "Küçük, kablolu", "tier": "Orta", "eff": 0.65, "L": 10, "W": 5, "H": 5}, {"ana": "Motor", "alt": "Krank Sensörü", "ozellik": "Çok küçük", "tier": "Yüksek", "eff": 0.85, "L": 5, "W": 4, "H": 4}, {"ana": "Motor", "alt": "Supap Tapet İtici Fincan", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 4, "W": 4, "H": 2}, {"ana": "Motor", "alt": "Turbo Valfi Elektrovana", "ozellik": "Küçük, düzensiz", "tier": "Orta", "eff": 0.65, "L": 10, "W": 8, "H": 8}, {"ana": "Motor", "alt": "Turbo Şarj", "ozellik": "Büyük, çok düzensiz gövde", "tier": "Çok Düşük", "eff": 0.425, "L": 30, "W": 25, "H": 25}, {"ana": "Motor", "alt": "Turbo Hortum ve Conta", "ozellik": "Esnek + yassı karışık", "tier": "Orta", "eff": 0.65, "L": 25, "W": 15, "H": 10}, {"ana": "Motor", "alt": "Gömlek", "ozellik": "Silindirik, orta düzensiz", "tier": "Orta", "eff": 0.65, "L": 9, "W": 9, "H": 15}, {"ana": "Motor", "alt": "Yağ Filtre Kütüğü", "ozellik": "Orta, düzensiz gövde", "tier": "Orta", "eff": 0.65, "L": 15, "W": 12, "H": 10}, {"ana": "Motor", "alt": "Yağ Seviye Sensör ve Çubuğu", "ozellik": "İnce, uzun çubuk", "tier": "Orta-Yüksek", "eff": 0.75, "L": 45, "W": 3, "H": 3}, {"ana": "Motor", "alt": "Krank Dişli", "ozellik": "Küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 10, "W": 10, "H": 3}, {"ana": "Motor", "alt": "Krank Kasnak", "ozellik": "Yuvarlak, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 18, "W": 18, "H": 5}, {"ana": "Motor", "alt": "Hava Hortumu", "ozellik": "Esnek, hacimli, boşluklu", "tier": "Düşük", "eff": 0.525, "L": 20, "W": 20, "H": 10}, {"ana": "Motor", "alt": "Motor Yağ Soğutucu", "ozellik": "Orta, düzensiz gövde", "tier": "Orta", "eff": 0.65, "L": 20, "W": 15, "H": 10}, {"ana": "Motor", "alt": "Eksantrik Vanos Dişli", "ozellik": "Küçük, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 12, "W": 12, "H": 5}, {"ana": "Motor", "alt": "Krank Keçesi", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 8, "W": 8, "H": 2}, {"ana": "Motor", "alt": "Silindir Kapak Saplaması", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 8, "W": 1, "H": 1}, {"ana": "Motor", "alt": "Hava Debimetresi", "ozellik": "Küçük, düzensiz uç", "tier": "Orta", "eff": 0.65, "L": 12, "W": 8, "H": 8}, {"ana": "Motor", "alt": "Oksijen (Lambda) Sensörü", "ozellik": "Küçük, kablolu, düzensiz uç", "tier": "Orta", "eff": 0.65, "L": 12, "W": 4, "H": 4}, {"ana": "Direksiyon", "alt": "Direksiyon Kutusu", "ozellik": "Büyük, çok düzensiz, ağır", "tier": "Çok Düşük", "eff": 0.425, "L": 50, "W": 20, "H": 20}, {"ana": "Direksiyon", "alt": "Direksiyon Pompası", "ozellik": "Orta, düzensiz gövde", "tier": "Düşük", "eff": 0.525, "L": 20, "W": 15, "H": 15}, {"ana": "Direksiyon", "alt": "Airbag Sargısı Zemberek", "ozellik": "Küçük, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 15, "W": 15, "H": 5}, {"ana": "Direksiyon", "alt": "Direksiyon Körüğü", "ozellik": "Hacimli, esnek/boşluklu", "tier": "Düşük", "eff": 0.525, "L": 20, "W": 10, "H": 10}, {"ana": "Direksiyon", "alt": "Direksiyon Yağ", "ozellik": "Küçük şişe, istiflenebilir", "tier": "Yüksek", "eff": 0.85, "L": 8, "W": 8, "H": 20}, {"ana": "Dış Kaporta Aksamı", "alt": "Silecek Süpürgesi", "ozellik": "İnce, uzun, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 55, "W": 3, "H": 3}, {"ana": "Dış Kaporta Aksamı", "alt": "Bagaj Amortisörü", "ozellik": "Uzun silindirik", "tier": "Orta-Yüksek", "eff": 0.75, "L": 40, "W": 6, "H": 6}, {"ana": "Dış Kaporta Aksamı", "alt": "Motor Kaput Amortisörü", "ozellik": "Uzun silindirik", "tier": "Orta-Yüksek", "eff": 0.75, "L": 40, "W": 6, "H": 6}, {"ana": "Dış Kaporta Aksamı", "alt": "Cam Krikosu", "ozellik": "Orta, düzensiz mekanizma", "tier": "Orta", "eff": 0.65, "L": 30, "W": 20, "H": 10}, {"ana": "Dış Kaporta Aksamı", "alt": "Ayna Kapağı", "ozellik": "Hacimli, kırılgan, boşluklu", "tier": "Düşük", "eff": 0.525, "L": 20, "W": 15, "H": 10}, {"ana": "Dış Kaporta Aksamı", "alt": "Dikiz Aynası", "ozellik": "Orta, düzensiz, kırılgan cam", "tier": "Düşük", "eff": 0.525, "L": 20, "W": 15, "H": 15}, {"ana": "Dış Kaporta Aksamı", "alt": "Ayna Camı", "ozellik": "İnce, kırılgan, düz", "tier": "Orta-Yüksek", "eff": 0.75, "L": 15, "W": 10, "H": 2}, {"ana": "Soğutma ve Isıtma", "alt": "Evaporatör", "ozellik": "Büyük, çok düzensiz, kırılgan kanat", "tier": "Çok Düşük", "eff": 0.425, "L": 30, "W": 20, "H": 15}, {"ana": "Soğutma ve Isıtma", "alt": "Devirdaim Hortumu", "ozellik": "Esnek, sarılabilir", "tier": "Orta", "eff": 0.65, "L": 20, "W": 20, "H": 10}, {"ana": "Soğutma ve Isıtma", "alt": "Klima Kompresörü", "ozellik": "Büyük, ağır, düzensiz", "tier": "Düşük", "eff": 0.525, "L": 25, "W": 20, "H": 18}, {"ana": "Soğutma ve Isıtma", "alt": "Klima Radyatörü", "ozellik": "Büyük, ince, kırılgan kanat", "tier": "Çok Düşük", "eff": 0.425, "L": 45, "W": 35, "H": 3}, {"ana": "Soğutma ve Isıtma", "alt": "Su Radyatörü", "ozellik": "Büyük, ince, kırılgan kanat", "tier": "Çok Düşük", "eff": 0.425, "L": 55, "W": 40, "H": 4}, {"ana": "Soğutma ve Isıtma", "alt": "Su Flanş", "ozellik": "Küçük, düzensiz", "tier": "Orta", "eff": 0.65, "L": 8, "W": 6, "H": 6}, {"ana": "Soğutma ve Isıtma", "alt": "Termostat", "ozellik": "Küçük, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 8, "W": 6, "H": 6}, {"ana": "Soğutma ve Isıtma", "alt": "Kalorifer Motoru", "ozellik": "Orta, düzensiz gövde", "tier": "Orta", "eff": 0.65, "L": 15, "W": 12, "H": 10}, {"ana": "Soğutma ve Isıtma", "alt": "Radyatör Yedek Su Deposu", "ozellik": "Hacimli, boşluklu plastik", "tier": "Düşük", "eff": 0.525, "L": 25, "W": 15, "H": 15}, {"ana": "Soğutma ve Isıtma", "alt": "Radyatör Kapağı", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 8, "W": 8, "H": 8}, {"ana": "Soğutma ve Isıtma", "alt": "Radyatör Fan ve Motoru", "ozellik": "Büyük, hacimli, boşluklu", "tier": "Düşük", "eff": 0.525, "L": 40, "W": 40, "H": 15}, {"ana": "Soğutma ve Isıtma", "alt": "Turbo Radyatörü", "ozellik": "Büyük, ince, kırılgan kanat", "tier": "Çok Düşük", "eff": 0.425, "L": 45, "W": 30, "H": 4}, {"ana": "Soğutma ve Isıtma", "alt": "Soğutma Fanı (Fan Termik)", "ozellik": "Hacimli, boşluklu pervane", "tier": "Düşük", "eff": 0.525, "L": 35, "W": 35, "H": 10}, {"ana": "Soğutma ve Isıtma", "alt": "Devirdaim Su Pompası", "ozellik": "Orta, düzensiz gövde", "tier": "Orta", "eff": 0.65, "L": 15, "W": 12, "H": 10}, {"ana": "Soğutma ve Isıtma", "alt": "Termostat Gövdesi", "ozellik": "Küçük, düzensiz", "tier": "Orta", "eff": 0.65, "L": 10, "W": 8, "H": 8}, {"ana": "Soğutma ve Isıtma", "alt": "Fan Müşürü", "ozellik": "Çok küçük", "tier": "Yüksek", "eff": 0.85, "L": 4, "W": 3, "H": 3}, {"ana": "Soğutma ve Isıtma", "alt": "Hararet Müşürü", "ozellik": "Çok küçük", "tier": "Yüksek", "eff": 0.85, "L": 4, "W": 3, "H": 3}, {"ana": "Soğutma ve Isıtma", "alt": "Radyatör Hortumu", "ozellik": "Esnek, hacimli, boşluklu", "tier": "Düşük", "eff": 0.525, "L": 20, "W": 20, "H": 10}, {"ana": "Soğutma ve Isıtma", "alt": "Radyatör Yedek Su Depo Kapağı", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 6, "W": 6, "H": 6}, {"ana": "Soğutma ve Isıtma", "alt": "Kalorifer Radyatörü", "ozellik": "Orta, ince, kırılgan kanat", "tier": "Düşük", "eff": 0.525, "L": 25, "W": 15, "H": 3}, {"ana": "Soğutma ve Isıtma", "alt": "Egzoz Sıcaklık Sensörü", "ozellik": "Küçük, kablolu", "tier": "Orta", "eff": 0.65, "L": 12, "W": 4, "H": 4}, {"ana": "Soğutma ve Isıtma", "alt": "Kalorifer Hortumu", "ozellik": "Esnek, sarılabilir", "tier": "Orta", "eff": 0.65, "L": 15, "W": 15, "H": 8}, {"ana": "Soğutma ve Isıtma", "alt": "Klima Kurutucu Tüp", "ozellik": "Silindirik, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 15, "W": 6, "H": 6}, {"ana": "Elektrik", "alt": "Cam Su Motoru", "ozellik": "Orta, düzensiz gövde", "tier": "Orta", "eff": 0.65, "L": 20, "W": 15, "H": 12}, {"ana": "Elektrik", "alt": "Alternatör Kasnağı", "ozellik": "Küçük, yuvarlak, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 8, "W": 8, "H": 4}, {"ana": "Elektrik", "alt": "Cam Açma Düğmesi", "ozellik": "Küçük, düzensiz", "tier": "Orta", "eff": 0.65, "L": 8, "W": 5, "H": 3}, {"ana": "Elektrik", "alt": "Park Sensörü", "ozellik": "Çok küçük", "tier": "Yüksek", "eff": 0.85, "L": 4, "W": 4, "H": 4}, {"ana": "Elektrik", "alt": "Röle ve Flaşör", "ozellik": "Çok küçük, düzenli", "tier": "Yüksek", "eff": 0.85, "L": 4, "W": 3, "H": 3}, {"ana": "Elektrik", "alt": "Korna", "ozellik": "Orta, yuvarlak, düzensiz", "tier": "Orta", "eff": 0.65, "L": 12, "W": 12, "H": 8}, {"ana": "Elektrik", "alt": "Dörtlü Flaşör Düğmesi", "ozellik": "Küçük, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 6, "W": 5, "H": 3}, {"ana": "Elektrik", "alt": "Dış Hava Sıcaklık Sensörü", "ozellik": "Çok küçük", "tier": "Yüksek", "eff": 0.85, "L": 5, "W": 3, "H": 3}, {"ana": "Elektrik", "alt": "Alternatör Parçaları", "ozellik": "Küçük, çeşitli", "tier": "Orta", "eff": 0.65, "L": 12, "W": 10, "H": 8}, {"ana": "Elektrik", "alt": "Marş Dinamosu", "ozellik": "Orta, ağır, düzensiz", "tier": "Düşük", "eff": 0.525, "L": 25, "W": 15, "H": 15}, {"ana": "Elektrik", "alt": "Marş Dinamo Parçaları", "ozellik": "Küçük, çeşitli", "tier": "Orta", "eff": 0.65, "L": 12, "W": 10, "H": 8}, {"ana": "Elektrik", "alt": "Alternatör", "ozellik": "Orta, ağır, düzensiz", "tier": "Düşük", "eff": 0.525, "L": 20, "W": 15, "H": 15}, {"ana": "Elektrik", "alt": "Ayna Kumanda Düğmesi", "ozellik": "Küçük, düzenli", "tier": "Orta-Yüksek", "eff": 0.75, "L": 6, "W": 5, "H": 3}, {"ana": "Tampon ve Aksamı", "alt": "Tampon Reflektörü", "ozellik": "Küçük, kırılgan", "tier": "Düşük", "eff": 0.525, "L": 12, "W": 8, "H": 5}, {"ana": "Tampon ve Aksamı", "alt": "Sis Farı Çerçevesi", "ozellik": "Küçük, düzensiz plastik", "tier": "Orta", "eff": 0.65, "L": 15, "W": 12, "H": 5}, {"ana": "Tampon ve Aksamı", "alt": "Tampon Braketi", "ozellik": "Küçük, düzensiz plastik", "tier": "Orta", "eff": 0.65, "L": 20, "W": 15, "H": 8}, {"ana": "Tampon ve Aksamı", "alt": "Tampon Takviyesi", "ozellik": "Büyük, uzun, hafif ama hacimli", "tier": "Çok Düşük", "eff": 0.425, "L": 130, "W": 15, "H": 15}];
+
+const BAYI_VERISI = [
+  {kod:"13403", ad:"NATAŞ", lat:40.9865572, lng:29.0870051},
+  {kod:"13407", ad:"SONKAR", lat:40.9938029, lng:28.8249285},
+  {kod:"13420", ad:"ALJ ÇEKMEKÖY", lat:41.0356831, lng:29.1613962},
+  {kod:"13421", ad:"KAR OTO", lat:41.0355996, lng:28.9344619},
+  {kod:"13423", ad:"GÜRSES", lat:41.0640215, lng:28.8375266},
+  {kod:"13424", ad:"AKTOY", lat:40.99406, lng:28.7169075},
+  {kod:"13425", ad:"MEZCAR", lat:41.0488846, lng:28.6284208},
+  {kod:"13426", ad:"ASF", lat:40.9104618, lng:29.2002394},
+  {kod:"13427", ad:"BAYKAR", lat:40.8894577, lng:29.2383346},
+  {kod:"14105", ad:"AYKON", lat:40.7874703, lng:29.414949},
+  {kod:"13463", ad:"NATAŞ KAPORTA", lat:40.9865572, lng:29.0870051},
+  {kod:"13466", ad:"BAYKAR KAPORTA", lat:40.8894577, lng:29.2383346},
+  {kod:"13467", ad:"SONKAR KAPORTA", lat:40.9938029, lng:28.8249285},
+];
+
+// derive packed volume per unit
+PARCA_VERISI.forEach(p => {
+  p.teorikHacim = p.L * p.W * p.H;
+  p.paketliHacim = p.teorikHacim * p.eff;
+});
+
+let order = []; // {alt, ana, paketliHacim, qty}
+let boxes = [
+  {name:"Küçük Koli", cap:5000},
+  {name:"Orta Koli", cap:15000},
+  {name:"Büyük Koli", cap:40000},
+];
+let selectedPart = null;
+
+const anaKatSelect = document.getElementById('anaKatSelect');
+const altKatSelect = document.getElementById('altKatSelect');
+const qtyInput = document.getElementById('qtyInput');
+const addBtn = document.getElementById('addBtn');
+const selectedHint = document.getElementById('selectedHint');
+const orderBody = document.getElementById('orderBody');
+const totalVolEl = document.getElementById('totalVol');
+const boxListEl = document.getElementById('boxList');
+const addBoxBtn = document.getElementById('addBoxBtn');
+const waveSelect = document.getElementById('waveSelect');
+const thresholdInput = document.getElementById('thresholdInput');
+const lastWaveCheck = document.getElementById('lastWaveCheck');
+
+const stampEl = document.getElementById('stampEl');
+const reasonText = document.getElementById('reasonText');
+const metricBox = document.getElementById('metricBox');
+const metricFill = document.getElementById('metricFill');
+const fillBar = document.getElementById('fillBar');
+const thresholdMark = document.getElementById('thresholdMark');
+
+function fmt(n){
+  return Math.round(n).toLocaleString('tr-TR');
+}
+
+// ---- cascading dropdown selection (tıkla, yazma) ----
+const anaKategoriler = [...new Set(PARCA_VERISI.map(p => p.ana))];
+anaKatSelect.innerHTML = '<option value="">1) Ana kategori seç…</option>' +
+  anaKategoriler.map(a => `<option value="${a}">${a}</option>`).join('');
+
+function updateAltOptions(){
+  const ana = anaKatSelect.value;
+  selectedPart = null;
+  if(!ana){
+    altKatSelect.innerHTML = '<option value="">2) Önce ana kategori seçin</option>';
+    altKatSelect.disabled = true;
+    selectedHint.textContent = 'Henüz parça seçilmedi.';
+    return;
+  }
+  const parts = PARCA_VERISI.filter(p => p.ana === ana);
+  altKatSelect.disabled = false;
+  altKatSelect.innerHTML = '<option value="">2) Parça seç…</option>' +
+    parts.map(p => `<option value="${p.alt}">${p.alt}</option>`).join('');
+  selectedHint.textContent = 'Şimdi parça seçin.';
+}
+
+anaKatSelect.addEventListener('change', updateAltOptions);
+
+altKatSelect.addEventListener('change', () => {
+  const alt = altKatSelect.value;
+  if(!alt){ selectedPart = null; selectedHint.textContent = 'Henüz parça seçilmedi.'; return; }
+  const p = PARCA_VERISI.find(x => x.ana === anaKatSelect.value && x.alt === alt);
+  selectedPart = p;
+  selectedHint.textContent = p
+    ? `Seçili: ${p.ana} → ${p.alt}  ·  birim tahmini hacim ≈ ${fmt(p.paketliHacim)} cm³`
+    : 'Henüz parça seçilmedi.';
+  selectedHint.style.color = '';
+});
+
+updateAltOptions();
+
+addBtn.addEventListener('click', () => {
+  if(!selectedPart){
+    selectedHint.textContent = 'Önce ana kategori ve parça seçin.';
+    selectedHint.style.color = 'var(--danger)';
+    return;
+  }
+  const qty = Math.max(1, parseInt(qtyInput.value) || 1);
+  const existing = order.find(o => o.alt === selectedPart.alt);
+  if(existing){ existing.qty += qty; }
+  else { order.push({ana:selectedPart.ana, alt:selectedPart.alt, unitVol:selectedPart.paketliHacim, qty}); }
+  qtyInput.value = 1;
+  renderOrder();
+  compute();
+});
+
+function renderOrder(){
+  if(order.length === 0){
+    orderBody.innerHTML = `<tr class="empty-row"><td colspan="5">Sipariş listesi boş — yukarıdan parça ekleyin.</td></tr>`;
+    totalVolEl.textContent = '0 cm³';
+    return;
+  }
+  orderBody.innerHTML = order.map((o, i) => `
+    <tr>
+      <td>${o.alt}<div style="font-size:11px;color:var(--muted);">${o.ana}</div></td>
+      <td class="num">${o.qty}</td>
+      <td class="num">${fmt(o.unitVol)}</td>
+      <td class="num">${fmt(o.unitVol * o.qty)}</td>
+      <td><button class="rm-btn" data-i="${i}" title="Kaldır">✕</button></td>
+    </tr>
+  `).join('');
+  const total = order.reduce((s,o) => s + o.unitVol*o.qty, 0);
+  totalVolEl.textContent = fmt(total) + ' cm³';
+}
+
+orderBody.addEventListener('click', (e) => {
+  const btn = e.target.closest('.rm-btn');
+  if(!btn) return;
+  order.splice(parseInt(btn.dataset.i), 1);
+  renderOrder();
+  compute();
+});
+
+// ---- box catalog ----
+function renderBoxes(){
+  boxListEl.innerHTML = boxes.map((b,i) => `
+    <div class="box-row">
+      <input type="text" data-i="${i}" data-f="name" value="${b.name}" placeholder="Koli adı">
+      <input type="number" data-i="${i}" data-f="cap" value="${b.cap}" placeholder="Kapasite (cm³)">
+      <button class="rm-btn" data-i="${i}" data-rm="1" title="Kaldır">✕</button>
+    </div>
+  `).join('');
+  renderVehKoliOptions();
+}
+boxListEl.addEventListener('input', (e) => {
+  const el = e.target;
+  const i = parseInt(el.dataset.i);
+  if(el.dataset.f === 'name') boxes[i].name = el.value;
+  if(el.dataset.f === 'cap') boxes[i].cap = parseFloat(el.value) || 0;
+  compute();
+});
+boxListEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-rm]');
+  if(!btn) return;
+  boxes.splice(parseInt(btn.dataset.i), 1);
+  renderBoxes();
+  compute();
+});
+addBoxBtn.addEventListener('click', () => {
+  boxes.push({name:'Yeni Koli', cap:10000});
+  renderBoxes();
+  compute();
+});
+
+[waveSelect, thresholdInput, lastWaveCheck].forEach(el => el.addEventListener('input', compute));
+lastWaveCheck.addEventListener('change', computeVehicle);
+
+// ---- araç doluluğu ----
+let vehicleEntries = []; // {sube, koliTipi, adet, cap}
+
+const vehSubeInput = document.getElementById('vehSubeInput');
+const vehKoliSelect = document.getElementById('vehKoliSelect');
+const vehAdetInput = document.getElementById('vehAdetInput');
+const vehAddBtn = document.getElementById('vehAddBtn');
+const vehBody = document.getElementById('vehBody');
+const vehTotalVolEl = document.getElementById('vehTotalVol');
+const vehCapInput = document.getElementById('vehCapInput');
+const vehThresholdInput = document.getElementById('vehThresholdInput');
+
+const vehStampEl = document.getElementById('vehStampEl');
+const vehReasonText = document.getElementById('vehReasonText');
+const vehMetricStops = document.getElementById('vehMetricStops');
+const vehMetricCount = document.getElementById('vehMetricCount');
+const vehMetricFill = document.getElementById('vehMetricFill');
+const vehFillBar = document.getElementById('vehFillBar');
+const vehThresholdMark = document.getElementById('vehThresholdMark');
+
+function renderVehKoliOptions(){
+  if(boxes.length === 0){
+    vehKoliSelect.innerHTML = '<option value="">Önce koli tipi tanımlayın</option>';
+    return;
+  }
+  vehKoliSelect.innerHTML = boxes.map(b => `<option value="${b.name}">${b.name} (${fmt(b.cap)} cm³)</option>`).join('');
+}
+
+// bayi dropdown'ını doldur
+vehSubeInput.innerHTML = '<option value="">Bayi seç…</option>' +
+  BAYI_VERISI.map(b => `<option value="${b.ad}">${b.kod} — ${b.ad}</option>`).join('');
+
+vehAddBtn.addEventListener('click', () => {
+  const sube = vehSubeInput.value;
+  const koliName = vehKoliSelect.value;
+  const adet = Math.max(1, parseInt(vehAdetInput.value) || 1);
+  if(!sube){ vehSubeInput.focus(); return; }
+  const boxDef = boxes.find(b => b.name === koliName);
+  if(!boxDef) return;
+  vehicleEntries.push({sube, koliTipi: koliName, adet, cap: boxDef.cap});
+  vehAdetInput.value = 1;
+  renderVehicle();
+  computeVehicle();
+});
+
+function renderVehicle(){
+  if(vehicleEntries.length === 0){
+    vehBody.innerHTML = `<tr class="empty-row"><td colspan="5">Araç listesi boş — yukarıdan koli ekleyin.</td></tr>`;
+    vehTotalVolEl.textContent = '0 cm³';
+    return;
+  }
+  vehBody.innerHTML = vehicleEntries.map((v,i) => `
+    <tr>
+      <td>${v.sube}</td>
+      <td>${v.koliTipi}</td>
+      <td class="num">${v.adet}</td>
+      <td class="num">${fmt(v.cap * v.adet)}</td>
+      <td><button class="rm-btn" data-i="${i}" title="Kaldır">✕</button></td>
+    </tr>
+  `).join('');
+  const total = vehicleEntries.reduce((s,v) => s + v.cap*v.adet, 0);
+  vehTotalVolEl.textContent = fmt(total) + ' cm³';
+}
+
+vehBody.addEventListener('click', (e) => {
+  const btn = e.target.closest('.rm-btn');
+  if(!btn) return;
+  vehicleEntries.splice(parseInt(btn.dataset.i), 1);
+  renderVehicle();
+  computeVehicle();
+});
+
+[vehCapInput, vehThresholdInput].forEach(el => el.addEventListener('input', computeVehicle));
+
+function computeVehicle(){
+  const totalBoxCount = vehicleEntries.reduce((s,v) => s + v.adet, 0);
+  const totalVol = vehicleEntries.reduce((s,v) => s + v.cap*v.adet, 0);
+  const cap = Math.max(1, parseFloat(vehCapInput.value) || 1);
+  const threshold = Math.max(1, Math.min(99, parseFloat(vehThresholdInput.value) || 70));
+  vehThresholdMark.textContent = `eşik ${threshold}%`;
+
+  if(vehicleEntries.length === 0){
+    vehStampEl.className = 'stamp hold';
+    vehStampEl.textContent = 'Bekleniyor';
+    vehReasonText.textContent = 'Araç listesine koli ekleyin, öneri burada oluşacak.';
+    vehMetricStops.textContent = '—';
+    vehMetricCount.textContent = '—';
+    vehMetricFill.textContent = '—';
+    vehFillBar.style.width = '0%';
+    vehFillBar.style.background = 'var(--muted)';
+    return;
+  }
+
+  const stopCount = new Set(vehicleEntries.map(v => v.sube.trim().toLocaleLowerCase('tr-TR'))).size;
+  const fillPct = 100 * totalVol / cap;
+  vehMetricStops.textContent = stopCount;
+  vehMetricCount.textContent = totalBoxCount;
+  vehMetricFill.textContent = `%${fillPct.toFixed(0)}`;
+  vehFillBar.style.width = Math.min(100, fillPct) + '%';
+
+  const isLastWave = lastWaveCheck.checked;
+
+  if(totalVol > cap){
+    vehStampEl.className = 'stamp hold';
+    vehStampEl.textContent = 'Taşıyor';
+    vehFillBar.style.background = 'var(--danger)';
+    vehReasonText.textContent = `Toplam koli hacmi araç kapasitesini aşıyor (%${fillPct.toFixed(0)}). İkinci bir araç gerekebilir ya da bazı koliler bir sonraki dalgaya kaydırılabilir.`;
+    return;
+  }
+
+  const shouldGo = fillPct >= threshold || isLastWave;
+  vehFillBar.style.background = shouldGo ? 'var(--send)' : 'var(--hold)';
+
+  if(shouldGo){
+    vehStampEl.className = 'stamp send';
+    vehStampEl.textContent = 'Çıkıyor';
+    vehReasonText.textContent = (isLastWave && fillPct < threshold)
+      ? `Doluluk %${fillPct.toFixed(0)} ile eşiğin altında, ama günün son dalgası — araç yine de çıkmalı.`
+      : `Araç doluluğu %${fillPct.toFixed(0)}, %${threshold} eşiğinin üzerinde. Araç çıkabilir.`;
+  } else {
+    vehStampEl.className = 'stamp hold';
+    vehStampEl.textContent = 'Bekliyor';
+    vehReasonText.textContent = `Araç doluluğu %${fillPct.toFixed(0)}, %${threshold} eşiğinin altında. Bir sonraki dalgaya kadar bekletilip daha fazla koliyle çıkması değerlendirilebilir.`;
+  }
+}
+
+function compute(){
+  const total = order.reduce((s,o) => s + o.unitVol*o.qty, 0);
+  const threshold = Math.max(1, Math.min(99, parseFloat(thresholdInput.value) || 50));
+  thresholdMark.textContent = `eşik ${threshold}%`;
+
+  if(order.length === 0 || boxes.length === 0){
+    stampEl.className = 'stamp hold';
+    stampEl.textContent = 'Bekleniyor';
+    reasonText.textContent = boxes.length === 0
+      ? 'Önce en az bir koli tipi tanımlayın.'
+      : 'Sipariş listesine parça ekleyin, öneri burada oluşacak.';
+    metricBox.textContent = '—';
+    metricFill.textContent = '—';
+    fillBar.style.width = '0%';
+    fillBar.style.background = 'var(--muted)';
+    return;
+  }
+
+  // en küçük yeterli koliyi bul
+  const sorted = [...boxes].filter(b=>b.cap>0).sort((a,b)=>a.cap-b.cap);
+  let chosen = sorted.find(b => b.cap >= total);
+  let multi = 1;
+  if(!chosen && sorted.length){
+    chosen = sorted[sorted.length-1];
+    multi = Math.ceil(total / chosen.cap);
+  }
+  if(!chosen){
+    metricBox.textContent = '—'; metricFill.textContent = '—';
+    reasonText.textContent = 'Koli kataloğuna geçerli bir kapasite girin.';
+    return;
+  }
+
+  const fillPct = multi > 1 ? 100 * total / (chosen.cap*multi) : 100 * total / chosen.cap;
+  metricBox.textContent = multi > 1 ? `${multi} × ${chosen.name}` : chosen.name;
+  metricFill.textContent = `%${fillPct.toFixed(0)}`;
+
+  fillBar.style.width = Math.min(100, fillPct) + '%';
+  fillBar.style.background = fillPct >= threshold ? 'var(--send)' : 'var(--hold)';
+
+  const isLastWave = lastWaveCheck.checked;
+  const shouldSend = fillPct >= threshold || isLastWave || multi > 1;
+
+  if(shouldSend){
+    stampEl.className = 'stamp send';
+    stampEl.textContent = 'Gönder';
+    if(isLastWave && fillPct < threshold){
+      reasonText.textContent = `Doluluk %${fillPct.toFixed(0)} ile eşiğin altında, ama bu günün son dalgası — ertelenecek bir sonraki dalga yok, gönderilmeli.`;
+    } else if(multi > 1){
+      reasonText.textContent = `Sipariş tek koliye sığmıyor (${multi} koli gerekiyor). Zaten büyük hacimli, ertelemenin faydası sınırlı.`;
+    } else {
+      reasonText.textContent = `Doluluk oranı %${fillPct.toFixed(0)}, belirlediğiniz %${threshold} eşiğinin üzerinde. Koli yeterince dolu, gönderilebilir.`;
+    }
+  } else {
+    stampEl.className = 'stamp hold';
+    stampEl.textContent = 'Bekleniyor';
+    reasonText.textContent = `Doluluk oranı %${fillPct.toFixed(0)}, %${threshold} eşiğinin altında. Bu şubenin siparişi bir sonraki dalgaya ertelenirse, yeni ürünlerle birleşip daha dolu tek bir koli çıkabilir.`;
+  }
+}
+
+renderBoxes();
+renderOrder();
+compute();
+renderVehicle();
+computeVehicle();
+
+// ---- rota optimizasyonu ----
+const VARSAYILAN_DEPO = { lat: 40.8841359, lng: 29.3784456, label: "Toyota Eğitim ve Yedek Parça Merkezi, Tuzla" };
+let depot = VARSAYILAN_DEPO; // {lat, lng, label}
+
+const depoAdresInput = document.getElementById('depoAdresInput');
+const depoBulBtn = document.getElementById('depoBulBtn');
+const depoHint = document.getElementById('depoHint');
+const vehicleCountInput = document.getElementById('vehicleCountInput');
+const rotaOlusturBtn = document.getElementById('rotaOlusturBtn');
+const rotaSonuc = document.getElementById('rotaSonuc');
+const rotaMapEl = document.getElementById('rotaMap');
+let leafletMap = null;
+
+function haversineKm(lat1, lon1, lat2, lon2){
+  const R = 6371;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLon = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+depoBulBtn.addEventListener('click', async () => {
+  const q = depoAdresInput.value.trim();
+  if(!q){ depoHint.textContent = 'Yeni bir adres yazın, ya da böyle bırakırsanız varsayılan depo (Tuzla) kullanılır.'; return; }
+  depoHint.textContent = 'Aranıyor…';
+  try{
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q + ', İstanbul')}`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'tr' } });
+    const data = await res.json();
+    if(data && data.length > 0){
+      depot = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), label: data[0].display_name };
+      depoHint.textContent = `Bulundu: ${data[0].display_name}`;
+    } else {
+      depot = VARSAYILAN_DEPO;
+      depoHint.textContent = 'Adres bulunamadı, varsayılan depo (Tuzla) kullanılacak.';
+    }
+  } catch(err){
+    depot = VARSAYILAN_DEPO;
+    depoHint.textContent = 'Arama başarısız (internet/erişim sorunu olabilir). Varsayılan depo (Tuzla) kullanılacak.';
+  }
+});
+
+function farthestPointInit(points, k){
+  const centroids = [{lat:points[0].lat, lng:points[0].lng}];
+  while(centroids.length < k){
+    let bestPt = null, bestD = -1;
+    for(const p of points){
+      let minD = Infinity;
+      for(const c of centroids){
+        const d = haversineKm(p.lat, p.lng, c.lat, c.lng);
+        if(d < minD) minD = d;
+      }
+      if(minD > bestD){ bestD = minD; bestPt = p; }
+    }
+    centroids.push({lat:bestPt.lat, lng:bestPt.lng});
+  }
+  return centroids;
+}
+
+function kmeansCluster(points, k, iterations){
+  if(k >= points.length){
+    return points.map((_,i) => i);
+  }
+  let centroids = farthestPointInit(points, k);
+  let assign = new Array(points.length).fill(0);
+  for(let iter=0; iter<iterations; iter++){
+    for(let i=0;i<points.length;i++){
+      let best=0, bestD=Infinity;
+      for(let c=0;c<k;c++){
+        const d = haversineKm(points[i].lat, points[i].lng, centroids[c].lat, centroids[c].lng);
+        if(d < bestD){ bestD = d; best = c; }
+      }
+      assign[i] = best;
+    }
+    const sums = Array.from({length:k}, () => ({lat:0,lng:0,n:0}));
+    for(let i=0;i<points.length;i++){
+      const a = assign[i];
+      sums[a].lat += points[i].lat; sums[a].lng += points[i].lng; sums[a].n++;
+    }
+    for(let c=0;c<k;c++){
+      if(sums[c].n > 0) centroids[c] = {lat: sums[c].lat/sums[c].n, lng: sums[c].lng/sums[c].n};
+    }
+  }
+  return assign;
+}
+
+function orderRoute(points, start){
+  let remaining = points.map((p,i) => ({...p, _i:i}));
+  let route = [];
+  let current = start;
+  if(!current){
+    current = remaining[0];
+    route.push(remaining.shift());
+  }
+  while(remaining.length){
+    let bestIdx = 0, bestD = Infinity;
+    for(let i=0;i<remaining.length;i++){
+      const d = haversineKm(current.lat, current.lng, remaining[i].lat, remaining[i].lng);
+      if(d < bestD){ bestD = d; bestIdx = i; }
+    }
+    current = remaining[bestIdx];
+    route.push(remaining.splice(bestIdx,1)[0]);
+  }
+  return route;
+}
+
+const ROUTE_COLORS = ["#1F3864","#AD5A17","#2F6F4E","#9C3B2E","#6A4C93","#1B7A8C","#B08900","#5C4033"];
+
+rotaOlusturBtn.addEventListener('click', () => {
+  const subeAdlari = [...new Set(vehicleEntries.map(v => v.sube))];
+  if(subeAdlari.length === 0){
+    rotaSonuc.innerHTML = `<p class="hint" style="color:var(--danger);">Önce Adım 4'te araç listesine bayi ekleyin.</p>`;
+    rotaMapEl.style.display = 'none';
+    return;
+  }
+  const points = subeAdlari.map(ad => {
+    const b = BAYI_VERISI.find(x => x.ad === ad);
+    return b ? {ad: b.ad, kod: b.kod, lat: b.lat, lng: b.lng} : null;
+  }).filter(Boolean);
+
+  const vehCount = Math.max(1, Math.min(points.length, parseInt(vehicleCountInput.value) || 1));
+  const assign = kmeansCluster(points, vehCount, 25);
+
+  const clusters = Array.from({length: vehCount}, () => []);
+  points.forEach((p,i) => clusters[assign[i]].push(p));
+
+  const routes = clusters.map(cluster => {
+    if(cluster.length === 0) return {stops: [], distanceKm: 0};
+    const ordered = orderRoute(cluster, depot);
+    let dist = 0;
+    let prev = depot;
+    for(const stop of ordered){
+      if(prev) dist += haversineKm(prev.lat, prev.lng, stop.lat, stop.lng);
+      prev = stop;
+    }
+    if(depot) dist += haversineKm(prev.lat, prev.lng, depot.lat, depot.lng);
+    return {stops: ordered, distanceKm: dist};
+  }).filter(r => r.stops.length > 0);
+
+  rotaSonuc.innerHTML = routes.map((r,i) => `
+    <div style="margin-bottom:14px;padding:12px 14px;border-left:4px solid ${ROUTE_COLORS[i % ROUTE_COLORS.length]};background:var(--paper-dark);border-radius:0 3px 3px 0;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:6px;">
+        Araç ${i+1} &middot; ${r.stops.length} durak &middot; ~${r.distanceKm.toFixed(1)} km (kuş uçuşu)
+      </div>
+      <div style="font-size:13.5px;">${(depot ? 'Depo → ' : '') + r.stops.map(s => `${s.ad}`).join(' → ') + (depot ? ' → Depo' : '')}</div>
+    </div>
+  `).join('');
+
+  renderRouteMap(routes);
+});
+
+function renderRouteMap(routes){
+  if(typeof L === 'undefined'){
+    rotaMapEl.style.display = 'none';
+    return;
+  }
+  rotaMapEl.style.display = 'block';
+  if(!leafletMap){
+    leafletMap = L.map(rotaMapEl);
+  }
+  leafletMap.eachLayer(layer => leafletMap.removeLayer(layer));
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap katkıda bulunanlar', maxZoom: 18
+  }).addTo(leafletMap);
+
+  const allPts = [];
+  if(depot){
+    L.marker([depot.lat, depot.lng], {title:'Depo'}).addTo(leafletMap).bindPopup('<b>Depo</b>');
+    allPts.push([depot.lat, depot.lng]);
+  }
+  routes.forEach((r,i) => {
+    const color = ROUTE_COLORS[i % ROUTE_COLORS.length];
+    const latlngs = [];
+    if(depot) latlngs.push([depot.lat, depot.lng]);
+    r.stops.forEach(s => {
+      latlngs.push([s.lat, s.lng]);
+      allPts.push([s.lat, s.lng]);
+      L.circleMarker([s.lat, s.lng], {radius:7, color, fillColor:color, fillOpacity:0.9})
+        .addTo(leafletMap).bindPopup(`<b>${s.ad}</b><br>Araç ${i+1}`);
+    });
+    if(depot) latlngs.push([depot.lat, depot.lng]);
+    L.polyline(latlngs, {color, weight:3, opacity:0.8}).addTo(leafletMap);
+  });
+  if(allPts.length){
+    leafletMap.fitBounds(allPts, {padding:[30,30]});
+  } else {
+    leafletMap.setView([41.01, 28.95], 10);
+  }
+  setTimeout(() => leafletMap.invalidateSize(), 100);
+}
+</script>
+</body>
+</html>
