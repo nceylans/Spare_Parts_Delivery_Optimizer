@@ -158,9 +158,14 @@
   /* box catalog */
   .box-list{margin-top:4px;}
   .box-row{
-    display:grid;grid-template-columns:1fr 110px 30px;gap:8px;margin-bottom:8px;align-items:center;
+    display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;
+    padding:10px;background:var(--paper-dark);border-radius:4px;border:1px solid var(--kraft);
   }
-  .box-row input{font-size:13px;padding:7px 9px;}
+  .box-row input, .box-row select{font-size:13px;padding:7px 9px;}
+  .box-row .f-name{flex:1 1 180px;}
+  .box-row .f-cap{flex:0 1 130px;}
+  .box-row .f-tip{flex:0 1 150px;}
+  .box-row .f-stack{flex:0 1 120px;}
   .box-row .rm-btn{justify-self:center;}
   .add-box-btn{
     background:none;border:1px dashed var(--kraft);color:var(--navy-soft);
@@ -279,9 +284,18 @@
 
       <div class="panel">
         <p class="panel-title"><span class="step-num">2</span> Koli Kataloğu</p>
-        <p class="panel-sub">Sahada gördüğünüz koli tiplerini ve yaklaşık kapasitelerini (cm³) buraya girin. Emin değilseniz kaba bir tahminle başlayın, sonra düzeltin.</p>
+        <p class="panel-sub">Sahadaki sabit koli boyutlarını (isim + kapasite, cm³) girin. Genelde az sayıda standart boyut olur. "Üst üste konabilir mi" ve "kolisiz mi" gibi sorular artık burada değil, Adım 4'te her yük eklerken sorulacak — çünkü bunlar koli tipine değil, o anki yüke/duruma bağlı.</p>
         <div class="box-list" id="boxList"></div>
         <button class="add-box-btn" id="addBoxBtn">+ Koli Tipi Ekle</button>
+        <div class="ctrl-row" style="margin-top:14px;">
+          <div>
+            <label>Yığılamayan yük hacim çarpanı</label>
+            <input type="number" id="stackPenaltyInput" value="1.5" min="1" step="0.1">
+          </div>
+          <div style="display:flex;align-items:flex-end;">
+            <p class="hint" style="margin:0;">Adım 4'te "Konamaz" işaretlediğiniz yükler, üstlerindeki boşluk da boşa gittiği için araç hesabında bu çarpanla büyütülerek sayılır.</p>
+          </div>
+        </div>
       </div>
 
       <div class="panel">
@@ -310,32 +324,48 @@
 
       <div class="panel">
         <p class="panel-title"><span class="step-num">4</span> Araç Doluluğu ve Çıkış Kararı</p>
-        <p class="panel-sub">Bu dalgada araca yüklenecek koliler hangi bayiye, hangi tipte, kaç adet? Bayiyi listeden seçin (13 bayinin gerçek konumu sistemde kayıtlı). Kolinin kendi kapasitesi sayılır.</p>
+        <p class="panel-sub">Bu dalgada araca yüklenecek her yük için: hangi bayi, koliyle mi gidiyor yoksa kolisiz mi, ve o anki yük üst üste konabilir mi (bu, parçaya göre değişir — koli tipine göre değil).</p>
         <div class="search-row">
           <select id="vehSubeInput" style="flex:1.3;"><option value="">Bayi seç…</option></select>
+          <select id="vehTasimaTipi" style="flex:1;">
+            <option value="koli">Koliyle</option>
+            <option value="kolisiz">Kolisiz (direkt yerleştirme)</option>
+          </select>
+        </div>
+        <div class="search-row" id="vehKoliGroup">
           <select id="vehKoliSelect" style="flex:1;"></select>
         </div>
+        <div class="search-row" id="vehKolisizGroup" style="display:none;">
+          <input type="text" id="vehKolisizAdInput" placeholder="Yükün adı (örn. Ön Cam)" style="flex:1.3;">
+          <input type="number" id="vehKolisizHacimInput" placeholder="Hacim (cm³)" min="1" style="flex:1;">
+        </div>
         <div class="search-row">
+          <select id="vehStackSelect" style="flex:1.3;">
+            <option value="true">Üst üste konabilir</option>
+            <option value="false">Konamaz </option>
+          </select>
           <input type="number" id="vehAdetInput" class="qty-input" placeholder="Adet" min="1" value="1">
-          <button class="add-btn" id="vehAddBtn">+ Araca Ekle</button>
+        </div>
+        <div class="search-row">
+          <button class="add-btn" id="vehAddBtn" style="flex:1;">+ Araca Ekle</button>
         </div>
 
         <table>
           <thead>
             <tr>
               <th>Şube</th>
-              <th>Koli Tipi</th>
+              <th>Yük</th>
               <th class="num">Adet</th>
               <th class="num">Hacim (cm³)</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="vehBody">
-            <tr class="empty-row"><td colspan="5">Araç listesi boş — yukarıdan koli ekleyin.</td></tr>
+            <tr class="empty-row"><td colspan="5">Araç listesi boş — yukarıdan yük ekleyin.</td></tr>
           </tbody>
           <tfoot>
             <tr>
-              <td colspan="3">TOPLAM KOLİ HACMİ</td>
+              <td colspan="3">TOPLAM YÜK HACMİ</td>
               <td class="num" id="vehTotalVol">0 cm³</td>
               <td></td>
             </tr>
@@ -589,8 +619,8 @@ orderBody.addEventListener('click', (e) => {
 function renderBoxes(){
   boxListEl.innerHTML = boxes.map((b,i) => `
     <div class="box-row">
-      <input type="text" data-i="${i}" data-f="name" value="${b.name}" placeholder="Koli adı">
-      <input type="number" data-i="${i}" data-f="cap" value="${b.cap}" placeholder="Kapasite (cm³)">
+      <input class="f-name" type="text" data-i="${i}" data-f="name" value="${b.name}" placeholder="Koli adı">
+      <input class="f-cap" type="number" data-i="${i}" data-f="cap" value="${b.cap}" placeholder="Kapasite (cm³)">
       <button class="rm-btn" data-i="${i}" data-rm="1" title="Kaldır">✕</button>
     </div>
   `).join('');
@@ -602,6 +632,7 @@ boxListEl.addEventListener('input', (e) => {
   if(el.dataset.f === 'name') boxes[i].name = el.value;
   if(el.dataset.f === 'cap') boxes[i].cap = parseFloat(el.value) || 0;
   compute();
+  computeVehicle();
 });
 boxListEl.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-rm]');
@@ -609,6 +640,7 @@ boxListEl.addEventListener('click', (e) => {
   boxes.splice(parseInt(btn.dataset.i), 1);
   renderBoxes();
   compute();
+  computeVehicle();
 });
 addBoxBtn.addEventListener('click', () => {
   boxes.push({name:'Yeni Koli', cap:10000});
@@ -620,16 +652,23 @@ addBoxBtn.addEventListener('click', () => {
 lastWaveCheck.addEventListener('change', computeVehicle);
 
 // ---- araç doluluğu ----
-let vehicleEntries = []; // {sube, koliTipi, adet, cap}
+let vehicleEntries = []; // {sube, ad, adet, cap, stackable, tip}
 
 const vehSubeInput = document.getElementById('vehSubeInput');
+const vehTasimaTipi = document.getElementById('vehTasimaTipi');
+const vehKoliGroup = document.getElementById('vehKoliGroup');
+const vehKolisizGroup = document.getElementById('vehKolisizGroup');
 const vehKoliSelect = document.getElementById('vehKoliSelect');
+const vehKolisizAdInput = document.getElementById('vehKolisizAdInput');
+const vehKolisizHacimInput = document.getElementById('vehKolisizHacimInput');
+const vehStackSelect = document.getElementById('vehStackSelect');
 const vehAdetInput = document.getElementById('vehAdetInput');
 const vehAddBtn = document.getElementById('vehAddBtn');
 const vehBody = document.getElementById('vehBody');
 const vehTotalVolEl = document.getElementById('vehTotalVol');
 const vehCapInput = document.getElementById('vehCapInput');
 const vehThresholdInput = document.getElementById('vehThresholdInput');
+const stackPenaltyInput = document.getElementById('stackPenaltyInput');
 
 const vehStampEl = document.getElementById('vehStampEl');
 const vehReasonText = document.getElementById('vehReasonText');
@@ -644,36 +683,59 @@ function renderVehKoliOptions(){
     vehKoliSelect.innerHTML = '<option value="">Önce koli tipi tanımlayın</option>';
     return;
   }
-  vehKoliSelect.innerHTML = boxes.map(b => `<option value="${b.name}">${b.name} (${fmt(b.cap)} cm³)</option>`).join('');
+  vehKoliSelect.innerHTML = boxes.map(b =>
+    `<option value="${b.name}">${b.name} (${fmt(b.cap)} cm³)</option>`
+  ).join('');
 }
 
 // bayi dropdown'ını doldur
 vehSubeInput.innerHTML = '<option value="">Bayi seç…</option>' +
   BAYI_VERISI.map(b => `<option value="${b.ad}">${b.kod} — ${b.ad}</option>`).join('');
 
+vehTasimaTipi.addEventListener('change', () => {
+  const kolisiz = vehTasimaTipi.value === 'kolisiz';
+  vehKoliGroup.style.display = kolisiz ? 'none' : 'flex';
+  vehKolisizGroup.style.display = kolisiz ? 'flex' : 'none';
+  if(kolisiz) vehStackSelect.value = 'false'; // kolisiz yükler genelde yığılamaz, ama değiştirilebilir
+});
+
 vehAddBtn.addEventListener('click', () => {
   const sube = vehSubeInput.value;
-  const koliName = vehKoliSelect.value;
   const adet = Math.max(1, parseInt(vehAdetInput.value) || 1);
+  const stackable = vehStackSelect.value === 'true';
   if(!sube){ vehSubeInput.focus(); return; }
-  const boxDef = boxes.find(b => b.name === koliName);
-  if(!boxDef) return;
-  vehicleEntries.push({sube, koliTipi: koliName, adet, cap: boxDef.cap});
+
+  let ad, cap, tip;
+  if(vehTasimaTipi.value === 'kolisiz'){
+    ad = vehKolisizAdInput.value.trim();
+    cap = parseFloat(vehKolisizHacimInput.value) || 0;
+    tip = 'kolisiz';
+    if(!ad || cap <= 0){ vehKolisizAdInput.focus(); return; }
+  } else {
+    const boxDef = boxes.find(b => b.name === vehKoliSelect.value);
+    if(!boxDef) return;
+    ad = boxDef.name;
+    cap = boxDef.cap;
+    tip = 'koli';
+  }
+
+  vehicleEntries.push({sube, ad, adet, cap, stackable, tip});
   vehAdetInput.value = 1;
+  if(tip === 'kolisiz'){ vehKolisizAdInput.value = ''; vehKolisizHacimInput.value = ''; }
   renderVehicle();
   computeVehicle();
 });
 
 function renderVehicle(){
   if(vehicleEntries.length === 0){
-    vehBody.innerHTML = `<tr class="empty-row"><td colspan="5">Araç listesi boş — yukarıdan koli ekleyin.</td></tr>`;
+    vehBody.innerHTML = `<tr class="empty-row"><td colspan="5">Araç listesi boş — yukarıdan yük ekleyin.</td></tr>`;
     vehTotalVolEl.textContent = '0 cm³';
     return;
   }
   vehBody.innerHTML = vehicleEntries.map((v,i) => `
     <tr>
       <td>${v.sube}</td>
-      <td>${v.koliTipi}</td>
+      <td>${v.ad}${v.tip === 'kolisiz' ? ' <span style="color:var(--navy-soft);font-size:10.5px;font-family:\'IBM Plex Mono\',monospace;">(kolisiz)</span>' : ''}${v.stackable === false ? ' <span style="color:var(--hold);font-size:10.5px;font-family:\'IBM Plex Mono\',monospace;">(yığılamaz)</span>' : ''}</td>
       <td class="num">${v.adet}</td>
       <td class="num">${fmt(v.cap * v.adet)}</td>
       <td><button class="rm-btn" data-i="${i}" title="Kaldır">✕</button></td>
@@ -691,11 +753,14 @@ vehBody.addEventListener('click', (e) => {
   computeVehicle();
 });
 
-[vehCapInput, vehThresholdInput].forEach(el => el.addEventListener('input', computeVehicle));
+[vehCapInput, vehThresholdInput, stackPenaltyInput].forEach(el => el.addEventListener('input', computeVehicle));
 
 function computeVehicle(){
   const totalBoxCount = vehicleEntries.reduce((s,v) => s + v.adet, 0);
   const totalVol = vehicleEntries.reduce((s,v) => s + v.cap*v.adet, 0);
+  const penalty = Math.max(1, parseFloat(stackPenaltyInput.value) || 1.5);
+  const effectiveVol = vehicleEntries.reduce((s,v) => s + v.cap*v.adet*(v.stackable === false ? penalty : 1), 0);
+  const hasNonStackable = vehicleEntries.some(v => v.stackable === false);
   const cap = Math.max(1, parseFloat(vehCapInput.value) || 1);
   const threshold = Math.max(1, Math.min(99, parseFloat(vehThresholdInput.value) || 70));
   vehThresholdMark.textContent = `eşik ${threshold}%`;
@@ -713,7 +778,11 @@ function computeVehicle(){
   }
 
   const stopCount = new Set(vehicleEntries.map(v => v.sube.trim().toLocaleLowerCase('tr-TR'))).size;
-  const fillPct = 100 * totalVol / cap;
+  const ozelCount = vehicleEntries.filter(v => v.tip === 'kolisiz').reduce((s,v) => s + v.adet, 0);
+  const fillPct = 100 * effectiveVol / cap;
+  const penaltyNote = hasNonStackable
+    ? ` (içinde üst üste konamayan yük var, etkin hacim ${penalty}× büyütülerek hesaplandı${ozelCount > 0 ? `; bunlardan ${ozelCount} tanesi kolisiz kalem` : ''})`
+    : '';
   vehMetricStops.textContent = stopCount;
   vehMetricCount.textContent = totalBoxCount;
   vehMetricFill.textContent = `%${fillPct.toFixed(0)}`;
@@ -721,11 +790,11 @@ function computeVehicle(){
 
   const isLastWave = lastWaveCheck.checked;
 
-  if(totalVol > cap){
+  if(effectiveVol > cap){
     vehStampEl.className = 'stamp hold';
     vehStampEl.textContent = 'Taşıyor';
     vehFillBar.style.background = 'var(--danger)';
-    vehReasonText.textContent = `Toplam koli hacmi araç kapasitesini aşıyor (%${fillPct.toFixed(0)}). İkinci bir araç gerekebilir ya da bazı koliler bir sonraki dalgaya kaydırılabilir.`;
+    vehReasonText.textContent = `Toplam koli hacmi (etkin) araç kapasitesini aşıyor (%${fillPct.toFixed(0)})${penaltyNote}. İkinci bir araç gerekebilir ya da bazı koliler bir sonraki dalgaya kaydırılabilir.`;
     return;
   }
 
@@ -736,12 +805,12 @@ function computeVehicle(){
     vehStampEl.className = 'stamp send';
     vehStampEl.textContent = 'Çıkıyor';
     vehReasonText.textContent = (isLastWave && fillPct < threshold)
-      ? `Doluluk %${fillPct.toFixed(0)} ile eşiğin altında, ama günün son dalgası — araç yine de çıkmalı.`
-      : `Araç doluluğu %${fillPct.toFixed(0)}, %${threshold} eşiğinin üzerinde. Araç çıkabilir.`;
+      ? `Doluluk %${fillPct.toFixed(0)} ile eşiğin altında, ama günün son dalgası — araç yine de çıkmalı.${penaltyNote}`
+      : `Araç doluluğu %${fillPct.toFixed(0)}, %${threshold} eşiğinin üzerinde. Araç çıkabilir.${penaltyNote}`;
   } else {
     vehStampEl.className = 'stamp hold';
     vehStampEl.textContent = 'Bekliyor';
-    vehReasonText.textContent = `Araç doluluğu %${fillPct.toFixed(0)}, %${threshold} eşiğinin altında. Bir sonraki dalgaya kadar bekletilip daha fazla koliyle çıkması değerlendirilebilir.`;
+    vehReasonText.textContent = `Araç doluluğu %${fillPct.toFixed(0)}, %${threshold} eşiğinin altında. Bir sonraki dalgaya kadar bekletilip daha fazla koliyle çıkması değerlendirilebilir.${penaltyNote}`;
   }
 }
 
